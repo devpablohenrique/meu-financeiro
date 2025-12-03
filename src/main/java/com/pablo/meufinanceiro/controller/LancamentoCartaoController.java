@@ -29,4 +29,10 @@ public class LancamentoCartaoController {
         lancamentoService.criarLancamentoParcelado(request);
     }
 
+    @GetMapping("/fatura/{faturaId}")
+    public List<LancamentoCartao> listarPorFatura(@PathVariable Long faturaId) {
+        return lancamentoService.listarPorFatura(faturaId);
+    }
+
+
 }

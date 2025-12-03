@@ -26,6 +26,9 @@ public class CartaoCredito {
     private BigDecimal limiteTotal;
 
     @Column(nullable = false)
+    private BigDecimal limiteDisponivel;
+
+    @Column(nullable = false)
     private Integer diaFechamentoFatura;
 
     @ManyToOne

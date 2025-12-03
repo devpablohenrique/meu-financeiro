@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-
 @Service
 @RequiredArgsConstructor
 public class CartaoCreditoService {
@@ -21,6 +20,11 @@ public class CartaoCreditoService {
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
         cartao.setUsuario(usuario);
+
+        // Inicializa o limite disponível com o limite total
+        cartao.setLimiteDisponivel(cartao.getLimiteTotal());
+
+        // Aqui SEMPRE usando a instância
         return cartaoCreditoRepository.save(cartao);
     }
 

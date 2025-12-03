@@ -39,4 +39,7 @@ public class Fatura {
 
     @Column(nullable = false)
     private LocalDate dataFechamento;
+
+    @Column(nullable = true)
+    private LocalDate dataPagamento;
 }

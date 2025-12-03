@@ -45,6 +45,15 @@ public class LancamentoCartao {
     @JoinColumn(name = "fatura_id", nullable = false)
     private Fatura fatura;
 
-
+    // GARANTE PADRÃO PARA LANÇAMENTO À VISTA
+    @PrePersist
+    public void prePersist() {
+        if (!this.parcelado) {
+            this.numeroParcela = 1;
+            this.totalParcelas = 1;
+        }
+    }
 
 }
+
+

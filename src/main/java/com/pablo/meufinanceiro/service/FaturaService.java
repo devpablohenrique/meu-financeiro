@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -37,4 +38,51 @@ public class FaturaService {
                     return faturaRepository.save(fatura);
                 });
     }
+
+    public List<Fatura> listarPorCartao(Long cartaoId) {
+        return faturaRepository.findByCartaoId(cartaoId);
+    }
+
+    public void fecharFatura(Long faturaId) {
+
+        Fatura fatura = faturaRepository.findById(faturaId)
+                .orElseThrow(() -> new RuntimeException("Fatura não encontrada"));
+
+        if (fatura.getStatus() != StatusFatura.ABERTA) {
+            throw new RuntimeException("Apenas faturas ABERTAS podem ser fechadas.");
+        }
+
+        fatura.setStatus(StatusFatura.FECHADA);
+        fatura.setDataFechamento(LocalDate.now());
+
+        faturaRepository.save(fatura);
+    }
+
+    public void pagarFatura(Long faturaId, BigDecimal valorPago) {
+
+        Fatura fatura = faturaRepository.findById(faturaId)
+                .orElseThrow(() -> new RuntimeException("Fatura não encontrada"));
+
+        if (fatura.getStatus() != StatusFatura.FECHADA) {
+            throw new RuntimeException("Apenas faturas FECHADAS podem ser pagas.");
+        }
+
+        if (valorPago.compareTo(fatura.getValorTotal()) != 0) {
+            throw new RuntimeException("O valor pago deve ser exatamente o valor total da fatura.");
+        }
+
+        CartaoCredito cartao = fatura.getCartao();
+
+        cartao.setLimiteDisponivel(
+                cartao.getLimiteDisponivel().add(valorPago)
+        );
+
+        fatura.setStatus(StatusFatura.PAGA);
+        fatura.setDataPagamento(LocalDate.now());
+
+        cartaoCreditoRepository.save(cartao);
+        faturaRepository.save(fatura);
+    }
+
+
 }
