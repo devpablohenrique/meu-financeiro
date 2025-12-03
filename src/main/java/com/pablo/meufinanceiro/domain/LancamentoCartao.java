@@ -28,6 +28,15 @@ public class LancamentoCartao {
     @Column(nullable = false)
     private LocalDate dataCompra;
 
+    @Column(nullable = false)
+    private boolean parcelado;
+
+    @Column(nullable = false)
+    private Integer numeroParcela;
+
+    @Column(nullable = false)
+    private Integer totalParcelas;
+
     @ManyToOne
     @JoinColumn(name = "cartao_id", nullable = false)
     private CartaoCredito cartao;
@@ -35,4 +44,7 @@ public class LancamentoCartao {
     @ManyToOne
     @JoinColumn(name = "fatura_id", nullable = false)
     private Fatura fatura;
+
+
+
 }
