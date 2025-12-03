@@ -1,12 +1,12 @@
 package com.pablo.meufinanceiro.controller;
 
+import com.pablo.meufinanceiro.dto.DashboardMensalResponse;
 import com.pablo.meufinanceiro.dto.SaldoCartaoResponse;
 import com.pablo.meufinanceiro.service.DashboardService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/dashboard")
@@ -19,4 +19,13 @@ public class DashboardController {
     public SaldoCartaoResponse saldoCartao(@PathVariable Long cartaoId) {
         return dashboardService.saldoConsolidado(cartaoId);
     }
+
+    @GetMapping("/mensal")
+    public List<DashboardMensalResponse> dashboardMensal(
+            @RequestParam Integer mes,
+            @RequestParam Integer ano
+    ) {
+        return dashboardService.resumoMensal(mes, ano);
+    }
+
 }

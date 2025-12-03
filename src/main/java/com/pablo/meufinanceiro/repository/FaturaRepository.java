@@ -1,6 +1,7 @@
 package com.pablo.meufinanceiro.repository;
 
 import com.pablo.meufinanceiro.domain.Fatura;
+import com.pablo.meufinanceiro.dto.DashboardMensalResponse;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -22,5 +23,17 @@ public interface FaturaRepository extends JpaRepository<Fatura, Long> {
 """)
     BigDecimal totalEmAberto(Long cartaoId);
 
+    @Query("""
+    SELECT new com.pablo.meufinanceiro.dto.DashboardMensalResponse(
+        f.cartao.id,
+        f.cartao.nome,
+        f.mes,
+        f.ano,
+        f.valorTotal
+    )
+    FROM Fatura f
+    WHERE f.mes = :mes AND f.ano = :ano
+""")
+    List<DashboardMensalResponse> dashboardMensal(Integer mes, Integer ano);
 
 }

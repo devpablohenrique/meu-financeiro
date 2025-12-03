@@ -1,6 +1,7 @@
 package com.pablo.meufinanceiro.service;
 
 import com.pablo.meufinanceiro.domain.CartaoCredito;
+import com.pablo.meufinanceiro.dto.DashboardMensalResponse;
 import com.pablo.meufinanceiro.dto.SaldoCartaoResponse;
 import com.pablo.meufinanceiro.repository.CartaoCreditoRepository;
 import com.pablo.meufinanceiro.repository.FaturaRepository;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -39,4 +41,9 @@ public class DashboardService {
                 gastoMesAtual
         );
     }
+
+    public List<DashboardMensalResponse> resumoMensal(Integer mes, Integer ano) {
+        return faturaRepository.dashboardMensal(mes, ano);
+    }
+
 }
