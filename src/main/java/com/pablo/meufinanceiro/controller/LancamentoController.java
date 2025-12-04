@@ -1,6 +1,7 @@
 package com.pablo.meufinanceiro.controller;
 
 import com.pablo.meufinanceiro.domain.Lancamento;
+import com.pablo.meufinanceiro.dto.LancamentoCartaoRequest;
 import com.pablo.meufinanceiro.dto.LancamentoParceladoRequest;
 import com.pablo.meufinanceiro.dto.LancamentoSimplesRequest;
 import com.pablo.meufinanceiro.service.LancamentoService;
@@ -21,9 +22,9 @@ public class LancamentoController {
     public Lancamento criarNoCartao(
             @PathVariable Long cartaoId,
             @PathVariable Long faturaId,
-            @RequestBody Lancamento lancamento
+            @RequestBody LancamentoCartaoRequest request
     ) {
-        return lancamentoService.criarLancamentoNoCartao(cartaoId, faturaId, lancamento);
+        return lancamentoService.criarLancamentoNoCartao(cartaoId, faturaId, request);
     }
 
     // ✅ LANÇAMENTO PARCELADO NO CARTÃO

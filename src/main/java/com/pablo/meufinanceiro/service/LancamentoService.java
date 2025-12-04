@@ -5,6 +5,7 @@ import com.pablo.meufinanceiro.domain.Fatura;
 import com.pablo.meufinanceiro.domain.Lancamento;
 import com.pablo.meufinanceiro.domain.Usuario;
 import com.pablo.meufinanceiro.domain.enums.StatusFatura;
+import com.pablo.meufinanceiro.dto.LancamentoCartaoRequest;
 import com.pablo.meufinanceiro.dto.LancamentoParceladoRequest;
 import com.pablo.meufinanceiro.dto.LancamentoSimplesRequest;
 import com.pablo.meufinanceiro.repository.CartaoCreditoRepository;
@@ -32,7 +33,7 @@ public class LancamentoService {
     public Lancamento criarLancamentoNoCartao(
             Long cartaoId,
             Long faturaId,
-            Lancamento lancamento
+            LancamentoCartaoRequest request
     ) {
         CartaoCredito cartao = cartaoRepository.findById(cartaoId)
                 .orElseThrow(() -> new RuntimeException("Cartão não encontrado"));
@@ -40,16 +41,13 @@ public class LancamentoService {
         Fatura fatura = faturaRepository.findById(faturaId)
                 .orElseThrow(() -> new RuntimeException("Fatura não encontrada"));
 
-        if (lancamento.getValor().compareTo(cartao.getLimiteDisponivel()) > 0) {
-            throw new RuntimeException("Limite insuficiente no cartão");
-        }
+        Usuario usuario = usuarioRepository.findById(request.usuarioId())
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
-        // ✅ ABATER LIMITE
-        cartao.setLimiteDisponivel(
-                cartao.getLimiteDisponivel().subtract(lancamento.getValor())
-        );
-        cartaoRepository.save(cartao);
-
+        Lancamento lancamento = new Lancamento();
+        lancamento.setDescricao(request.descricao());
+        lancamento.setValor(request.valor());
+        lancamento.setUsuario(usuario);
         lancamento.setCartao(cartao);
         lancamento.setFatura(fatura);
         lancamento.setDataLancamento(LocalDate.now());
@@ -60,11 +58,15 @@ public class LancamentoService {
 
         Lancamento salvo = lancamentoRepository.save(lancamento);
 
-        // ✅ ATUALIZAR TOTAL DA FATURA
         fatura.setValorTotal(
                 fatura.getValorTotal().add(lancamento.getValor())
         );
         faturaRepository.save(fatura);
+
+        cartao.setLimiteDisponivel(
+                cartao.getLimiteDisponivel().subtract(lancamento.getValor())
+        );
+        cartaoRepository.save(cartao);
 
         return salvo;
     }
