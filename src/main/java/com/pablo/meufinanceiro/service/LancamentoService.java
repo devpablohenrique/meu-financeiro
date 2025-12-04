@@ -2,12 +2,15 @@ package com.pablo.meufinanceiro.service;
 
 import com.pablo.meufinanceiro.domain.CartaoCredito;
 import com.pablo.meufinanceiro.domain.Fatura;
-import com.pablo.meufinanceiro.domain.LancamentoCartao;
+import com.pablo.meufinanceiro.domain.Lancamento;
+import com.pablo.meufinanceiro.domain.Usuario;
 import com.pablo.meufinanceiro.domain.enums.StatusFatura;
 import com.pablo.meufinanceiro.dto.LancamentoParceladoRequest;
+import com.pablo.meufinanceiro.dto.LancamentoSimplesRequest;
 import com.pablo.meufinanceiro.repository.CartaoCreditoRepository;
 import com.pablo.meufinanceiro.repository.FaturaRepository;
-import com.pablo.meufinanceiro.repository.LancamentoCartaoRepository;
+import com.pablo.meufinanceiro.repository.LancamentoRepository;
+import com.pablo.meufinanceiro.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -18,16 +21,18 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class LancamentoCartaoService {
+public class LancamentoService {
 
-    private final LancamentoCartaoRepository lancamentoRepository;
+    private final LancamentoRepository lancamentoRepository;
     private final FaturaRepository faturaRepository;
     private final CartaoCreditoRepository cartaoRepository;
+    private final UsuarioRepository usuarioRepository;
 
-    public LancamentoCartao criarLancamento(
+    // ✅ LANÇAMENTO NO CARTÃO (À VISTA)
+    public Lancamento criarLancamentoNoCartao(
             Long cartaoId,
             Long faturaId,
-            LancamentoCartao lancamento
+            Lancamento lancamento
     ) {
         CartaoCredito cartao = cartaoRepository.findById(cartaoId)
                 .orElseThrow(() -> new RuntimeException("Cartão não encontrado"));
@@ -35,12 +40,11 @@ public class LancamentoCartaoService {
         Fatura fatura = faturaRepository.findById(faturaId)
                 .orElseThrow(() -> new RuntimeException("Fatura não encontrada"));
 
-        // ✅ VALIDAR PELO LIMITE DISPONÍVEL (CORRETO)
         if (lancamento.getValor().compareTo(cartao.getLimiteDisponivel()) > 0) {
             throw new RuntimeException("Limite insuficiente no cartão");
         }
 
-        // ✅ ABATER LIMITE DO CARTÃO
+        // ✅ ABATER LIMITE
         cartao.setLimiteDisponivel(
                 cartao.getLimiteDisponivel().subtract(lancamento.getValor())
         );
@@ -48,12 +52,13 @@ public class LancamentoCartaoService {
 
         lancamento.setCartao(cartao);
         lancamento.setFatura(fatura);
-        lancamento.setDataCompra(LocalDate.now());
+        lancamento.setDataLancamento(LocalDate.now());
         lancamento.setParcelado(false);
         lancamento.setNumeroParcela(1);
         lancamento.setTotalParcelas(1);
+        lancamento.setRecorrente(false);
 
-        LancamentoCartao salvo = lancamentoRepository.save(lancamento);
+        Lancamento salvo = lancamentoRepository.save(lancamento);
 
         // ✅ ATUALIZAR TOTAL DA FATURA
         fatura.setValorTotal(
@@ -64,11 +69,18 @@ public class LancamentoCartaoService {
         return salvo;
     }
 
-    // ✅ LANÇAMENTO PARCELADO
+    // ✅ LANÇAMENTO PARCELADO NO CARTÃO
     public void criarLancamentoParcelado(LancamentoParceladoRequest request) {
 
         CartaoCredito cartao = cartaoRepository.findById(request.cartaoId())
                 .orElseThrow(() -> new RuntimeException("Cartão não encontrado"));
+
+        if (request.valorTotal().compareTo(cartao.getLimiteDisponivel()) > 0) {
+            throw new RuntimeException("Limite insuficiente no cartão");
+        }
+
+        Usuario usuario = usuarioRepository.findById(request.usuarioId())
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
         BigDecimal valorParcela = request.valorTotal()
                 .divide(BigDecimal.valueOf(request.totalParcelas()), 2, RoundingMode.HALF_UP);
@@ -81,7 +93,6 @@ public class LancamentoCartaoService {
             int mes = dataParcela.getMonthValue();
             int ano = dataParcela.getYear();
 
-            // 🔎 Buscar fatura do mês
             Fatura fatura = faturaRepository
                     .findByCartaoIdAndMesAndAno(cartao.getId(), mes, ano)
                     .orElseGet(() -> {
@@ -91,40 +102,73 @@ public class LancamentoCartaoService {
                         nova.setAno(ano);
                         nova.setValorTotal(BigDecimal.ZERO);
                         nova.setStatus(StatusFatura.ABERTA);
-                        nova.setDataFechamento(LocalDate.of(ano, mes, cartao.getDiaFechamentoFatura()));
+                        nova.setDataFechamento(
+                                LocalDate.of(ano, mes, cartao.getDiaFechamentoFatura())
+                        );
                         return faturaRepository.save(nova);
                     });
 
-            LancamentoCartao lancamento = new LancamentoCartao();
+            Lancamento lancamento = new Lancamento();
             lancamento.setDescricao(request.descricao() + " (" + i + "/" + request.totalParcelas() + ")");
             lancamento.setValor(valorParcela);
             lancamento.setParcelado(true);
             lancamento.setNumeroParcela(i);
             lancamento.setTotalParcelas(request.totalParcelas());
-            lancamento.setDataCompra(dataParcela);
+            lancamento.setDataLancamento(dataParcela);
             lancamento.setCartao(cartao);
             lancamento.setFatura(fatura);
+            lancamento.setRecorrente(false);
+            lancamento.setUsuario(usuario);
 
             lancamentoRepository.save(lancamento);
 
-            // Atualizar total da fatura
             fatura.setValorTotal(
                     fatura.getValorTotal().add(valorParcela)
             );
-
             faturaRepository.save(fatura);
         }
 
-        // Atualizar limite disponível do cartão (valor TOTAL)
         cartao.setLimiteDisponivel(
                 cartao.getLimiteDisponivel().subtract(request.valorTotal())
         );
         cartaoRepository.save(cartao);
     }
 
-    public List<LancamentoCartao> listarPorFatura(Long faturaId) {
+    // ✅ LANÇAMENTO FORA DO CARTÃO (Luz, aluguel, pix, etc)
+    public Lancamento criarLancamentoSimples(LancamentoSimplesRequest request) {
 
+        Usuario usuario = usuarioRepository.findById(request.usuarioId())
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+        Lancamento lancamento = new Lancamento();
+        lancamento.setUsuario(usuario);
+        lancamento.setDescricao(request.descricao());
+        lancamento.setValor(request.valor());
+
+        lancamento.setCartao(null);
+        lancamento.setFatura(null);
+        lancamento.setParcelado(false);
+        lancamento.setRecorrente(false);
+        lancamento.setNumeroParcela(1);
+        lancamento.setTotalParcelas(1);
+        lancamento.setDataLancamento(LocalDate.now());
+
+        return lancamentoRepository.save(lancamento);
+    }
+
+
+    // ✅ LISTAR POR FATURA
+    public List<Lancamento> listarPorFatura(Long faturaId) {
         return lancamentoRepository.findByFaturaId(faturaId);
     }
 
+    // ✅ LISTAR POR CARTÃO
+    public List<Lancamento> listarPorCartao(Long cartaoId) {
+        return lancamentoRepository.findByCartaoId(cartaoId);
+    }
+
+    // ✅ LISTAR POR USUÁRIO (BASE DO DASHBOARD)
+    public List<Lancamento> listarPorUsuario(Long usuarioId) {
+        return lancamentoRepository.findByUsuarioId(usuarioId);
+    }
 }
