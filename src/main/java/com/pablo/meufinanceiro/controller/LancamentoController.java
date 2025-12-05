@@ -4,6 +4,7 @@ import com.pablo.meufinanceiro.domain.Lancamento;
 import com.pablo.meufinanceiro.dto.LancamentoCartaoRequest;
 import com.pablo.meufinanceiro.dto.LancamentoParceladoRequest;
 import com.pablo.meufinanceiro.dto.LancamentoSimplesRequest;
+import com.pablo.meufinanceiro.dto.LancamentoReceitaRequest;
 import com.pablo.meufinanceiro.service.LancamentoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -33,10 +34,16 @@ public class LancamentoController {
         lancamentoService.criarLancamentoParcelado(request);
     }
 
-    // ✅ LANÇAMENTO FORA DO CARTÃO (CONTA, ALUGUEL, PIX, ETC)
+    // ✅ LANÇAMENTO FORA DO CARTÃO (DESPESA)
     @PostMapping("/simples")
     public Lancamento criarSimples(@RequestBody LancamentoSimplesRequest request) {
-        return lancamentoService.criarLancamentoSimples(request);
+        return lancamentoService.criarDespesaSimples(request);
+    }
+
+    // ✅ NOVO — LANÇAMENTO DE RECEITA
+    @PostMapping("/receita")
+    public Lancamento criarReceita(@RequestBody LancamentoReceitaRequest request) {
+        return lancamentoService.criarReceita(request);
     }
 
     // ✅ LISTAR LANÇAMENTOS POR FATURA

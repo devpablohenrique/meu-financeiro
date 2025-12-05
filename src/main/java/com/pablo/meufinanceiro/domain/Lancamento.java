@@ -1,5 +1,6 @@
 package com.pablo.meufinanceiro.domain;
 
+import com.pablo.meufinanceiro.domain.enums.TipoLancamento;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -29,6 +30,13 @@ public class Lancamento {
     private LocalDate dataLancamento;
 
     // =========================
+    // TIPO (RECEITA / DESPESA)
+    // =========================
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TipoLancamento tipo;
+
+    // =========================
     // RECORRÊNCIA
     // =========================
     @Column(nullable = false)
@@ -56,7 +64,7 @@ public class Lancamento {
     // RELACIONAMENTOS
     // =========================
 
-    // Se for null → lançamento fora do cartão (ex: luz, aluguel, pix)
+    // Se for null → lançamento fora do cartão (ex: luz, aluguel)
     @ManyToOne
     @JoinColumn(name = "cartao_id")
     private CartaoCredito cartao;
@@ -78,6 +86,10 @@ public class Lancamento {
 
         if (parcelado == null) parcelado = false;
         if (recorrente == null) recorrente = false;
+
+        if (tipo == null) {
+            tipo = TipoLancamento.DESPESA; // padrão seguro
+        }
 
         if (!parcelado) {
             this.numeroParcela = 1;
